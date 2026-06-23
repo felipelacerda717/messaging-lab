@@ -1,0 +1,18 @@
+{
+  "name": "messaging-lab",
+  "version": "1.0.0",
+  "description": "Laboratorio de estudo de messageria com RabbitMQ",
+  "scripts": {
+    "01:produtor": "ts-node src/01-hello-queue/produtor.ts",
+    "01:consumer": "ts-node src/01-hello-queue/consumer.ts"
+  },
+  "dependencies": {
+    "amqplib": "^2.0.1"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.8",
+    "@types/node": "^26.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}
