@@ -4,7 +4,13 @@
   "description": "Laboratorio de estudo de messageria com RabbitMQ",
   "scripts": {
     "01:produtor": "ts-node src/01-hello-queue/produtor.ts",
-    "01:consumer": "ts-node src/01-hello-queue/consumer.ts"
+    "01:consumer": "ts-node src/01-hello-queue/consumer.ts",
+
+    "02:produtor": "ts-node src/02-routing/direct-produtor.ts",
+    "02:consumidor": "ts-node src/02-routing/direct-consumidor.ts",
+
+    "02:topic-produtor": "ts-node src/02-routing/topic-produtor.ts",
+    "02:topic-consumidor": "ts-node src/02-routing/topic-consumidor.ts"
   },
   "dependencies": {
     "amqplib": "^2.0.1"
