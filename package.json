@@ -10,7 +10,11 @@
     "02:consumidor": "ts-node src/02-routing/direct-consumidor.ts",
 
     "02:topic-produtor": "ts-node src/02-routing/topic-produtor.ts",
-    "02:topic-consumidor": "ts-node src/02-routing/topic-consumidor.ts"
+    "02:topic-consumidor": "ts-node src/02-routing/topic-consumidor.ts",
+
+    "03:produtor": "ts-node src/03-reliability/produtor.ts",
+    "03:consumidor": "ts-node src/03-reliability/consumidor.ts",
+    "03:dlq": "ts-node src/03-reliability/dlq-consumidor.ts"
   },
   "dependencies": {
     "amqplib": "^2.0.1"

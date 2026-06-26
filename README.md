@@ -106,3 +106,70 @@ obs:
 
 - no 01 a fila era o destino; no 02 o destino eh o exchange e a fila eh so quem assina (bind) o que quer receber
 - isso eh pub/sub na pratica: um produtor publica uma vez e varios consumers interessados recebem, cada um filtrando o que importa pra ele
+
+
+====================================================================
+
+Nivel 03 - Reliability (confiabilidade)
+
+
+Ate aqui tudo deu certo no caminho feliz. Esse nivel eh sobre o que fazer quando a tarefa FALHA, sem perder msg e sem travar a fila.
+
+(produtor -> fila tarefas -> consumer processa; se falhar -> nack -> DLX -> fila tarefas_dlq)
+
+
+Passos:
+
+1. docker compose up -d (sobe a fila);
+2. npm run 03:consumidor (deixa o consumer escutando, prefetch 1)
+3. npm run 03:produtor -- "processar pagamento" (tarefa que da certo, vai tomar ack)
+4. npm run 03:produtor -- "falha proposital" (tarefa que falha, vai pro DLQ)
+5. npm run 03:dlq (le o cemiterio e ve a tarefa que falhou la dentro)
+6. http://localhost:15672 -> aba Queues, da pra ver tarefas e tarefas_dlq
+
+
+O que aprendi:
+
+- ack manual (noAck: false):
+  eu que confirmo a msg na mao. enquanto nao dou ack a msg fica "unacked", se o consumer cair o broker reentrega pra outro. eh isso que garante que a tarefa nao some no meio do caminho
+- prefetch (canal.prefetch(1)):
+  limita quantas msgs o broker manda pro consumer sem ter tomado ack ainda. com 1, ele so manda a proxima quando a atual for confirmada
+  sem prefetch um consumer engole a fila inteira e nao da pra dividir carga justo entre varios consumers (um consumer rapido fica parado enquanto um lento ta cheio)
+- nack (canal.nack(msg, false, requeue)):
+  rejeita a msg. o terceiro parametro (requeue) muda tudo:
+  requeue false = manda a msg pro dead-letter (sai da fila principal)
+  requeue true = volta a msg pra mesma fila
+- DLQ (Dead Letter Queue):
+  fila separada pra onde vao as msgs rejeitadas. configurei na fila principal com arguments x-dead-letter-exchange apontando pro DLX
+  serve pra tarefa que falha nao se perder e nao ficar atrapalhando a fila boa; depois eu olho o DLQ com calma e decido o que fazer
+- poison message (msg veneno):
+  eh a msg que falha toda vez que eh processada. se eu der nack com requeue true, ela volta pra fila, falha de novo, volta de novo... loop infinito que trava o consumer e impede as outras de rodar
+  a solucao eh justamente o DLQ: nack com requeue false tira o veneno da fila e joga no cemiterio
+
+
+requeue false vs requeue true:
+
+  requeue false eh o seguro: tarefa quebrada sai de cena e vai pro DLQ pra analise depois
+  requeue true so faz sentido pra falha temporaria (ex: banco caiu 1s), nunca pra erro permanente, senao vira poison message
+
+
+Experimento da poison message:
+
+1. npm run 03:consumidor -- requeue (liga o consumer no modo perigoso)
+2. npm run 03:produtor -- "falha proposital"
+3. olha o terminal do consumer: ele fica imprimindo FALHOU pra mesma msg sem parar (loop)
+4. mata com Ctrl+C. isso eh a poison message na pratica
+5. agora roda npm run 03:consumidor normal (sem requeue) e manda a mesma falha: a msg vai UMA vez pra FALHOU e cai no DLQ, fila limpa
+
+
+Resultado do lab:
+
+Mandei tarefas boas e ruins na mesma fila. As boas tomaram ack e sumiram, as ruins foram rejeitadas e apareceram na tarefas_dlq sem travar a fila principal. No requeue a tarefa ruim entrou em loop e travou o consumer, provando por que reentregar erro permanente eh furada e por que o DLQ existe.
+
+
+obs:
+
+- ack confirma sucesso, nack confirma fracasso (e decide se reenfileira ou mata)
+- prefetch eh o que torna possivel escalar com varios consumers dividindo carga de verdade
+- DLQ eh rede de seguranca: nada de bom em deixar uma msg ruim derrubar o processamento das boas
+- isso conecta direto com producao: disparo de msg que falha (numero invalido, api fora) nao pode travar a fila inteira nem se perder, vai pro DLQ e alguem trata depois
